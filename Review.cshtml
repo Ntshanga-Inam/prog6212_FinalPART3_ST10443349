@@ -1,0 +1,253 @@
+﻿@model CMCS.Models.Claim
+@using FluentValidation.Results
+@{
+    ViewData["Title"] = "Review Claim";
+    var userRole = ViewBag.UserRole as string ?? "Coordinator";
+    var validationResult = ViewBag.ValidationResult as ValidationResult;
+}
+
+<div class="row justify-content-center">
+    <div class="col-lg-12">
+        <div class="card">
+            <div class="card-header bg-primary text-white d-flex justify-content-between align-items-center">
+                <h4 class="mb-0"><i class="fas fa-search me-2"></i>Review Claim #@Model.ClaimId</h4>
+                <div>
+                    <span class="badge bg-light text-dark me-2">@userRole</span>
+                    <button type="button" class="btn btn-sm btn-outline-light" onclick="validateClaim()">
+                        <i class="fas fa-check-circle me-1"></i>Validate
+                    </button>
+                </div>
+            </div>
+            <div class="card-body">
+
+                <!-- Validation Results -->
+                <div id="validationAlert" class="mb-4" style="display: none;">
+                    <!-- Dynamic validation results will appear here -->
+                </div>
+
+                @if (validationResult != null && !validationResult.IsValid)
+                {
+                    <div class="alert alert-warning mb-4">
+                        <h5><i class="fas fa-exclamation-triangle me-2"></i>Validation Issues Found</h5>
+                        <ul class="mb-0">
+                            @foreach (var error in validationResult.Errors)
+                            {
+                                <li>@error.ErrorMessage</li>
+                            }
+                        </ul>
+                    </div>
+                }
+
+                <!-- Rest of the existing review content remains the same -->
+                <!-- Claim Summary -->
+                <div class="row mb-4">
+                    <div class="col-md-6">
+                        <h5>Claim Information</h5>
+                        <table class="table table-bordered">
+                            <tr>
+                                <th>Lecturer:</th>
+                                <td>Dr. John Smith</td>
+                            </tr>
+                            <tr>
+                                <th>Claim Month:</th>
+                                <td>@Model.ClaimMonth.ToString("MMMM yyyy")</td>
+                            </tr>
+                            <tr>
+                                <th>Total Hours:</th>
+                                <td>@Model.TotalHours</td>
+                            </tr>
+                            <tr>
+                                <th>Hourly Rate:</th>
+                                <td>R @Model.HourlyRate.ToString("N2")</td>
+                            </tr>
+                            <tr>
+                                <th>Total Amount:</th>
+                                <td class="fw-bold">R @Model.Amount.ToString("N2")</td>
+                            </tr>
+                            <tr>
+                                <th>Status:</th>
+                                <td>
+                                    @GetStatusBadge(Model.Status)
+                                </td>
+                            </tr>
+                            <tr>
+                                <th>Submitted Date:</th>
+                                <td>@Model.SubmittedDate.ToString("dd MMM yyyy")</td>
+                            </tr>
+                        </table>
+                    </div>
+                    <div class="col-md-6">
+                        <!-- Existing notes and documents sections -->
+                    </div>
+                </div>
+
+                <!-- Existing claim items and documents sections -->
+                <!-- Enhanced Approval Actions -->
+                <div class="row mt-4">
+                    <div class="col-12">
+                        <div class="card">
+                            <div class="card-header d-flex justify-content-between align-items-center">
+                                <h5 class="mb-0">Approval Decision</h5>
+                                <div class="form-check form-switch">
+                                    <input class="form-check-input" type="checkbox" id="bypassValidation">
+                                    <label class="form-check-label" for="bypassValidation">Bypass Validation</label>
+                                </div>
+                            </div>
+                            <div class="card-body">
+                                <form id="approvalForm" method="post">
+                                    @Html.AntiForgeryToken()
+
+                                    <div class="mb-3">
+                                        <label for="approvalNotes" class="form-label">Decision Notes</label>
+                                        <textarea class="form-control" id="approvalNotes" name="notes" rows="3"
+                                                  placeholder="Add any comments or notes about your decision..."></textarea>
+                                    </div>
+
+                                    <div class="d-flex justify-content-between">
+                                        <a href="@Url.Action("Index", "Approval")" class="btn btn-outline-secondary">
+                                            <i class="fas fa-arrow-left me-2"></i>Back to List
+                                        </a>
+
+                                        <div>
+                                            <!-- Reject Button -->
+                                            <button type="button" class="btn btn-danger me-2" data-bs-toggle="modal" data-bs-target="#rejectModal">
+                                                <i class="fas fa-times me-2"></i>Reject Claim
+                                            </button>
+
+                                            <!-- Approve Button -->
+                                            <button type="button" class="btn btn-success" onclick="submitApproval()">
+                                                <i class="fas fa-check me-2"></i>
+                                                @if (userRole == "Coordinator")
+                                                {
+                                                    <text>Approve & Send to Manager</text>
+                                                }
+                                                else if (userRole == "Manager")
+                                                {
+                                                    <text>Final Approval</text>
+                                                }
+                                                else
+                                                {
+                                                    <text>Approve</text>
+                                                }
+                                            </button>
+                                        </div>
+                                    </div>
+                                </form>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Reject Confirmation Modal (existing) -->
+@section Scripts {
+    <script>
+        function validateClaim() {
+            fetch('@Url.Action("ValidateClaim", "Approval", new { id = Model.ClaimId })', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                }
+            })
+            .then(response => response.json())
+            .then(data => {
+                const alertDiv = document.getElementById('validationAlert');
+                if (data.success) {
+                    if (data.isValid) {
+                        alertDiv.innerHTML = `
+                            <div class="alert alert-success">
+                                <i class="fas fa-check-circle me-2"></i>
+                                <strong>Validation Passed!</strong> All checks completed successfully.
+                            </div>
+                        `;
+                    } else {
+                        let errorsHtml = data.errors.map(error =>
+                            `<li><strong>${error.property}:</strong> ${error.message}</li>`
+                        ).join('');
+
+                        alertDiv.innerHTML = `
+                            <div class="alert alert-warning">
+                                <i class="fas fa-exclamation-triangle me-2"></i>
+                                <strong>Validation Issues Found</strong>
+                                <ul class="mb-0 mt-2">${errorsHtml}</ul>
+                            </div>
+                        `;
+                    }
+                    alertDiv.style.display = 'block';
+                } else {
+                    alert('Error validating claim: ' + data.error);
+                }
+            })
+            .catch(error => {
+                console.error('Error:', error);
+                alert('Error validating claim. Please try again.');
+            });
+        }
+
+        function submitApproval() {
+            const form = document.getElementById('approvalForm');
+            const notes = document.getElementById('approvalNotes').value;
+            const bypassValidation = document.getElementById('bypassValidation').checked;
+
+            if (confirm('Are you sure you want to approve this claim?')) {
+                // Create a form for approval
+                const approvalForm = document.createElement('form');
+                approvalForm.method = 'POST';
+                approvalForm.action = '@Url.Action("Approve", "Approval", new { id = Model.ClaimId })' +
+                    (bypassValidation ? '?bypassValidation=true' : '');
+
+                const csrfToken = document.querySelector('input[name="__RequestVerificationToken"]').value;
+                const csrfInput = document.createElement('input');
+                csrfInput.type = 'hidden';
+                csrfInput.name = '__RequestVerificationToken';
+                csrfInput.value = csrfToken;
+                approvalForm.appendChild(csrfInput);
+
+                const notesInput = document.createElement('input');
+                notesInput.type = 'hidden';
+                notesInput.name = 'notes';
+                notesInput.value = notes;
+                approvalForm.appendChild(notesInput);
+
+                document.body.appendChild(approvalForm);
+                approvalForm.submit();
+            }
+        }
+
+        // Load approval statistics
+        function loadApprovalStats() {
+            fetch('@Url.Action("GetApprovalStats", "Approval")')
+                .then(response => response.json())
+                .then(data => {
+                    console.log('Approval Statistics:', data);
+                    // You can display these stats in the UI if needed
+                });
+        }
+
+        // Initialize on page load
+        document.addEventListener('DOMContentLoaded', function() {
+            loadApprovalStats();
+
+            // Auto-validate on page load
+            setTimeout(validateClaim, 1000);
+        });
+    </script>
+}
+
+@functions {
+    public string GetStatusBadge(string status)
+    {
+        return status switch
+        {
+            "Submitted" => "<span class='badge bg-warning'><i class='fas fa-clock me-1'></i>Submitted</span>",
+            "With Coordinator" => "<span class='badge bg-info'><i class='fas fa-user-check me-1'></i>With Coordinator</span>",
+            "With Manager" => "<span class='badge bg-primary'><i class='fas fa-user-tie me-1'></i>With Manager</span>",
+            "Approved" => "<span class='badge bg-success'><i class='fas fa-check-circle me-1'></i>Approved</span>",
+            "Rejected" => "<span class='badge bg-danger'><i class='fas fa-times-circle me-1'></i>Rejected</span>",
+            _ => "<span class='badge bg-secondary'>" + status + "</span>"
+        };
+    }
+}

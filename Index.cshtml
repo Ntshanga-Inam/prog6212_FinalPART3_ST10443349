@@ -1,0 +1,38 @@
+﻿@{
+    ViewData["Title"] = "Welcome to CMCS";
+}
+
+<div class="text-center">
+    <h1 class="display-4">Contract Monthly Claim System</h1>
+    <p class="lead">Streamlining lecturer claims, verification, and approvals</p>
+
+    <div class="row mt-5">
+        <div class="col-md-4">
+            <div class="card">
+                <div class="card-body">
+                    <h5 class="card-title">For Lecturers</h5>
+                    <p class="card-text">Submit monthly claims, track status, and upload documents easily.</p>
+                    <a href="@Url.Action("Login", "Account")" class="btn btn-primary">Lecturer Login</a>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-4">
+            <div class="card">
+                <div class="card-body">
+                    <h5 class="card-title">For Coordinators</h5>
+                    <p class="card-text">Review and verify claims submitted by lecturers.</p>
+                    <a href="@Url.Action("Login", "Account")" class="btn btn-primary">Coordinator Login</a>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-4">
+            <div class="card">
+                <div class="card-body">
+                    <h5 class="card-title">For Managers</h5>
+                    <p class="card-text">Approve verified claims and manage the approval process.</p>
+                    <a href="@Url.Action("Login", "Account")" class="btn btn-primary">Manager Login</a>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>

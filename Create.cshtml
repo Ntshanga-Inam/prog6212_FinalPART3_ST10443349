@@ -1,0 +1,422 @@
+﻿@model CMCS.Models.ClaimSubmissionViewModel
+@{
+    ViewData["Title"] = "Submit New Claim";
+}
+
+<div class="row justify-content-center">
+    <div class="col-lg-10">
+        <div class="card">
+            <div class="card-header bg-primary text-white">
+                <h4 class="mb-0"><i class="fas fa-plus-circle me-2"></i>Submit New Claim</h4>
+            </div>
+            <div class="card-body">
+                <form asp-action="Create" method="post" enctype="multipart/form-data" id="claimForm">
+                    @Html.AntiForgeryToken()
+
+                    <!-- Basic Claim Information -->
+                    <div class="row mb-4">
+                        <div class="col-12">
+                            <h5 class="border-bottom pb-2">Basic Information</h5>
+                        </div>
+                        <div class="col-md-6">
+                            <div class="mb-3">
+                                <label asp-for="ClaimMonth" class="form-label"></label>
+                                <input asp-for="ClaimMonth" class="form-control" type="month" />
+                                <span asp-validation-for="ClaimMonth" class="text-danger"></span>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Hourly Rate and Calculation -->
+                    <div class="row mb-4">
+                        <div class="col-12">
+                            <h5 class="border-bottom pb-2">Payment Calculation</h5>
+                        </div>
+                        <div class="col-md-4">
+                            <div class="mb-3">
+                                <label asp-for="HourlyRate" class="form-label"></label>
+                                <div class="input-group">
+                                    <span class="input-group-text">R</span>
+                                    <input asp-for="HourlyRate" class="form-control"
+                                           type="number" step="1" min="100" max="1000"
+                                           id="hourlyRateInput" />
+                                </div>
+                                <span asp-validation-for="HourlyRate" class="text-danger"></span>
+                                <small class="form-text text-muted">Between R100 and R1000</small>
+                            </div>
+                        </div>
+                        <div class="col-md-4">
+                            <div class="mb-3">
+                                <label asp-for="TotalHours" class="form-label"></label>
+                                <input asp-for="TotalHours" class="form-control"
+                                       type="number" step="0.5" min="0.5" max="200"
+                                       id="totalHoursInput" />
+                                <span asp-validation-for="TotalHours" class="text-danger"></span>
+                                <small class="form-text text-muted">Between 0.5 and 200 hours</small>
+                            </div>
+                        </div>
+                        <div class="col-md-4">
+                            <div class="mb-3">
+                                <label class="form-label">Total Amount</label>
+                                <div class="input-group">
+                                    <span class="input-group-text">R</span>
+                                    <input type="text" class="form-control bg-light fw-bold"
+                                           id="totalAmountDisplay" value="@Model.TotalAmount.ToString("N2")" readonly />
+                                </div>
+                                <small class="form-text text-muted">Calculated automatically</small>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Detailed Claim Items -->
+                    <div class="row mb-4">
+                        <div class="col-12">
+                            <div class="d-flex justify-content-between align-items-center mb-3">
+                                <h5 class="border-bottom pb-2">Detailed Hours (Optional)</h5>
+                                <button type="button" class="btn btn-outline-primary btn-sm" id="addClaimItem">
+                                    <i class="fas fa-plus me-1"></i>Add Entry
+                                </button>
+                            </div>
+
+                            <div id="claimItemsContainer">
+                                @if (Model.ClaimItems != null && Model.ClaimItems.Any())
+                                {
+                                    for (int i = 0; i < Model.ClaimItems.Count; i++)
+                                    {
+                                        <div class="claim-item card mb-2">
+                                            <div class="card-body">
+                                                <div class="row">
+                                                    <div class="col-md-3">
+                                                        <label class="form-label">Date</label>
+                                                        <input asp-for="ClaimItems[i].Date" class="form-control" type="date" />
+                                                        <span asp-validation-for="ClaimItems[i].Date" class="text-danger"></span>
+                                                    </div>
+                                                    <div class="col-md-2">
+                                                        <label class="form-label">Hours</label>
+                                                        <input asp-for="ClaimItems[i].HoursWorked" class="form-control hours-worked"
+                                                               type="number" step="0.5" min="0.5" max="24" />
+                                                        <span asp-validation-for="ClaimItems[i].HoursWorked" class="text-danger"></span>
+                                                    </div>
+                                                    <div class="col-md-3">
+                                                        <label class="form-label">Module</label>
+                                                        <input asp-for="ClaimItems[i].Module" class="form-control" placeholder="e.g., CS101" />
+                                                        <span asp-validation-for="ClaimItems[i].Module" class="text-danger"></span>
+                                                    </div>
+                                                    <div class="col-md-3">
+                                                        <label class="form-label">Description</label>
+                                                        <input asp-for="ClaimItems[i].Description" class="form-control" placeholder="Activity description" />
+                                                        <span asp-validation-for="ClaimItems[i].Description" class="text-danger"></span>
+                                                    </div>
+                                                    <div class="col-md-1 d-flex align-items-end">
+                                                        <button type="button" class="btn btn-danger btn-sm remove-item">
+                                                            <i class="fas fa-times"></i>
+                                                        </button>
+                                                    </div>
+                                                </div>
+                                            </div>
+                                        </div>
+                                    }
+                                }
+                            </div>
+                            <div class="mt-2">
+                                <small class="text-muted">
+                                    <i class="fas fa-info-circle me-1"></i>
+                                    Items Total: <span id="itemsTotalHours">0</span> hours
+                                    <span id="itemsTotalWarning" class="text-warning ms-2" style="display: none;">
+                                        (Will update total hours above)
+                                    </span>
+                                </small>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Notes and Documents -->
+                    <div class="row mb-4">
+                        <div class="col-md-6">
+                            <div class="mb-3">
+                                <label asp-for="Notes" class="form-label"></label>
+                                <textarea asp-for="Notes" class="form-control" rows="3"
+                                          placeholder="Optional notes about this claim..."></textarea>
+                                <span asp-validation-for="Notes" class="text-danger"></span>
+                            </div>
+                        </div>
+                        <div class="col-md-6">
+                            <!-- Document Upload Section -->
+                            <div class="mb-3">
+                                <h5 class="border-bottom pb-2">Supporting Documents</h5>
+                                <div class="mb-3">
+                                    <label class="form-label">Upload Supporting Documents</label>
+                                    <input type="file" class="form-control" id="fileUpload"
+                                           accept=".pdf,.docx,.xlsx,.jpg,.png" />
+                                    <small class="form-text text-muted">
+                                        Allowed files: PDF, DOCX, XLSX, JPG, PNG (Max: 5MB each)
+                                    </small>
+                                </div>
+                                <button type="button" class="btn btn-outline-primary btn-sm" onclick="uploadDocument()">
+                                    <i class="fas fa-upload me-1"></i>Upload Document
+                                </button>
+
+                                <div id="uploadedFiles" class="mt-3">
+                                    <!-- Uploaded files will appear here -->
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="d-grid gap-2">
+                        <button type="submit" class="btn btn-success btn-lg" id="submitButton">
+                            <i class="fas fa-paper-plane me-2"></i>Submit Claim
+                        </button>
+                        <a href="@Url.Action("Index", "Claim")" class="btn btn-outline-secondary">Cancel</a>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+
+@section Scripts {
+    <partial name="_ValidationScriptsPartial" />
+    <script>
+        // Enhanced auto-calculation functionality
+        function updateTotalAmount() {
+            const hours = parseFloat($('#totalHoursInput').val()) || 0;
+            const rate = parseFloat($('#hourlyRateInput').val()) || 0;
+            const total = hours * rate;
+
+            // Format the amount with proper currency formatting
+            $('#totalAmountDisplay').val('R ' + total.toLocaleString('en-ZA', { minimumFractionDigits: 2, maximumFractionDigits: 2 }));
+
+            // Update validation styling
+            validateInputs();
+
+            console.log(`Calculation: ${hours} hours × R${rate} = R${total}`);
+        }
+
+        // Real-time validation with visual feedback
+        function validateInputs() {
+            const hours = parseFloat($('#totalHoursInput').val()) || 0;
+            const rate = parseFloat($('#hourlyRateInput').val()) || 0;
+
+            // Hours validation
+            if (hours < 0.5 || hours > 200) {
+                $('#totalHoursInput').addClass('is-invalid').removeClass('is-valid');
+            } else {
+                $('#totalHoursInput').addClass('is-valid').removeClass('is-invalid');
+            }
+
+            // Rate validation
+            if (rate < 100 || rate > 1000) {
+                $('#hourlyRateInput').addClass('is-invalid').removeClass('is-valid');
+            } else {
+                $('#hourlyRateInput').addClass('is-valid').removeClass('is-invalid');
+            }
+        }
+
+        // Update items total hours and auto-update main total if items exist
+        function updateItemsTotal() {
+            let total = 0;
+            let hasItems = false;
+
+            $('.hours-worked').each(function() {
+                const value = parseFloat($(this).val()) || 0;
+                if (value > 0) {
+                    total += value;
+                    hasItems = true;
+                }
+            });
+
+            $('#itemsTotalHours').text(total.toFixed(1));
+
+            // Auto-update total hours if detailed items are provided
+            if (hasItems && total > 0) {
+                $('#totalHoursInput').val(total);
+                $('#itemsTotalWarning').show();
+                updateTotalAmount();
+            } else {
+                $('#itemsTotalWarning').hide();
+            }
+        }
+
+        // Add new claim item
+        $('#addClaimItem').click(function() {
+            const index = $('.claim-item').length;
+            const today = new Date().toISOString().split('T')[0];
+
+            const newItem = `
+                <div class="claim-item card mb-2">
+                    <div class="card-body">
+                        <div class="row">
+                            <div class="col-md-3">
+                                <label class="form-label">Date</label>
+                                <input name="ClaimItems[${index}].Date" class="form-control" type="date" value="${today}" />
+                            </div>
+                            <div class="col-md-2">
+                                <label class="form-label">Hours</label>
+                                <input name="ClaimItems[${index}].HoursWorked" class="form-control hours-worked"
+                                       type="number" step="0.5" min="0.5" max="24" value="1.0" />
+                            </div>
+                            <div class="col-md-3">
+                                <label class="form-label">Module</label>
+                                <input name="ClaimItems[${index}].Module" class="form-control" placeholder="e.g., CS101" />
+                            </div>
+                            <div class="col-md-3">
+                                <label class="form-label">Description</label>
+                                <input name="ClaimItems[${index}].Description" class="form-control" placeholder="Activity description" />
+                            </div>
+                            <div class="col-md-1 d-flex align-items-end">
+                                <button type="button" class="btn btn-danger btn-sm remove-item">
+                                    <i class="fas fa-times"></i>
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            `;
+
+            $('#claimItemsContainer').append(newItem);
+            updateItemsTotal();
+
+            // Scroll to the new item
+            $('html, body').animate({
+                scrollTop: $('#claimItemsContainer').children().last().offset().top - 100
+            }, 500);
+        });
+
+        // Remove claim item
+        $(document).on('click', '.remove-item', function() {
+            $(this).closest('.claim-item').fadeOut(300, function() {
+                $(this).remove();
+                updateItemsTotal();
+            });
+        });
+
+        // Event listeners for real-time calculation and validation
+        $('#totalHoursInput, #hourlyRateInput').on('input', function() {
+            updateTotalAmount();
+        });
+
+        $(document).on('input', '.hours-worked', function() {
+            updateItemsTotal();
+        });
+
+        // Enhanced form submission with better validation
+        $('#claimForm').on('submit', function(e) {
+            const hours = parseFloat($('#totalHoursInput').val()) || 0;
+            const rate = parseFloat($('#hourlyRateInput').val()) || 0;
+            const itemsTotal = parseFloat($('#itemsTotalHours').text()) || 0;
+
+            // Validate hours
+            if (hours < 0.5 || hours > 200) {
+                e.preventDefault();
+                alert('Total hours must be between 0.5 and 200');
+                $('#totalHoursInput').focus();
+                return false;
+            }
+
+            // Validate rate
+            if (rate < 100 || rate > 1000) {
+                e.preventDefault();
+                alert('Hourly rate must be between R100 and R1000');
+                $('#hourlyRateInput').focus();
+                return false;
+            }
+
+            // Validate claim items if provided
+            if (itemsTotal > 0 && Math.abs(itemsTotal - hours) > 0.01) {
+                if (!confirm(`Total hours from items (${itemsTotal}) doesn't match entered total hours (${hours}). Do you want to use the items total (${itemsTotal}) instead?`)) {
+                    e.preventDefault();
+                    return false;
+                } else {
+                    // Auto-correct the total hours
+                    $('#totalHoursInput').val(itemsTotal);
+                }
+            }
+
+            // Show loading state
+            $('#submitButton').prop('disabled', true).html('<i class="fas fa-spinner fa-spin me-2"></i>Submitting...');
+
+            return true;
+        });
+
+        // Document upload function
+        function uploadDocument() {
+            const fileInput = document.getElementById('fileUpload');
+            const file = fileInput.files[0];
+
+            if (!file) {
+                alert('Please select a file to upload.');
+                return;
+            }
+
+            // Validate file size
+            if (file.size > 5 * 1024 * 1024) {
+                alert('File size must be less than 5MB.');
+                return;
+            }
+
+            const formData = new FormData();
+            formData.append('file', file);
+            formData.append('claimId', '0'); // 0 for new claim
+
+            // Show uploading state
+            const uploadBtn = document.querySelector('button[onclick="uploadDocument()"]');
+            const originalText = uploadBtn.innerHTML;
+            uploadBtn.innerHTML = '<i class="fas fa-spinner fa-spin me-1"></i>Uploading...';
+            uploadBtn.disabled = true;
+
+            fetch('@Url.Action("UploadDocument", "Claim")', {
+                method: 'POST',
+                body: formData
+            })
+            .then(response => response.json())
+            .then(data => {
+                if (data.success) {
+                    const filesList = document.getElementById('uploadedFiles');
+                    const fileItem = document.createElement('div');
+                    fileItem.className = 'alert alert-success alert-dismissible fade show';
+                    fileItem.innerHTML = `
+                        <i class="fas fa-file me-2"></i>${data.fileName}
+                        <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+                    `;
+                    filesList.appendChild(fileItem);
+                    fileInput.value = '';
+
+                    // Show success message
+                    alert('Document uploaded successfully!');
+                } else {
+                    alert('Upload failed: ' + data.message);
+                }
+            })
+            .catch(error => {
+                console.error('Error:', error);
+                alert('Error uploading file. Please try again.');
+            })
+            .finally(() => {
+                // Reset button state
+                uploadBtn.innerHTML = originalText;
+                uploadBtn.disabled = false;
+            });
+        }
+
+        // Initialize on page load
+        $(document).ready(function() {
+            updateTotalAmount();
+            validateInputs();
+            updateItemsTotal();
+
+            // Set focus to first input
+            $('#hourlyRateInput').focus();
+
+            console.log('Claim form initialized with auto-calculation');
+        });
+    <
+    <script>
+        // Auto-refresh claims list every 10 seconds
+        setInterval(() => {
+            console.log('Refreshing claims list...');
+            location.reload();
+        }, 10000);
+    </script>
+}
+}

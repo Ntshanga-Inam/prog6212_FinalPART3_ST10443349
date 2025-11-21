@@ -1,0 +1,293 @@
+﻿@model List<CMCS.Models.Claim>
+@{
+    ViewData["Title"] = "Approved Claims - Payment Processing";
+}
+
+<div class="row">
+    <div class="col-12">
+        <div class="d-flex justify-content-between align-items-center mb-4">
+            <h2><i class="fas fa-check-circle me-2"></i>Approved Claims - Ready for Payment</h2>
+            <div>
+                <button class="btn btn-success me-2" onclick="processSelectedPayments()">
+                    <i class="fas fa-money-bill-wave me-2"></i>Process Selected Payments
+                </button>
+                <button class="btn btn-outline-primary" onclick="exportToExcel()">
+                    <i class="fas fa-download me-2"></i>Export to Excel
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="card">
+    <div class="card-body">
+        <div class="table-responsive">
+            <table class="table table-striped table-hover" id="approvedClaimsTable">
+                <thead class="table-dark">
+                    <tr>
+                        <th>
+                            <input type="checkbox" id="selectAll" onchange="toggleSelectAll(this)">
+                        </th>
+                        <th>Claim ID</th>
+                        <th>Lecturer</th>
+                        <th>Month</th>
+                        <th>Total Hours</th>
+                        <th>Hourly Rate</th>
+                        <th>Amount</th>
+                        <th>Approved Date</th>
+                        <th>Actions</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    @foreach (var claim in Model)
+                    {
+                        <tr data-claim-id="@claim.ClaimId">
+                            <td>
+                                <input type="checkbox" class="claim-checkbox" value="@claim.ClaimId">
+                            </td>
+                            <td><strong>#@claim.ClaimId</strong></td>
+                            <td>@GetLecturerName(claim.LecturerId)</td>
+                            <td>@claim.ClaimMonth.ToString("MMMM yyyy")</td>
+                            <td>@claim.TotalHours</td>
+                            <td>R @claim.HourlyRate.ToString("N2")</td>
+                            <td class="fw-bold">R @claim.Amount.ToString("N2")</td>
+                            <td>@(claim.ApprovedDate?.ToString("dd MMM yyyy") ?? "N/A")</td>
+                            <td>
+                                <button class="btn btn-sm btn-info" onclick="viewClaim(@claim.ClaimId)">
+                                    <i class="fas fa-eye"></i>
+                                </button>
+                                <button class="btn btn-sm btn-success" onclick="processSinglePayment(@claim.ClaimId)">
+                                    <i class="fas fa-money-bill"></i>
+                                </button>
+                            </td>
+                        </tr>
+                    }
+                </tbody>
+                <tfoot>
+                    <tr class="table-active">
+                        <td colspan="6" class="text-end fw-bold">Total Selected:</td>
+                        <td id="selectedTotal" class="fw-bold">R 0.00</td>
+                        <td colspan="2"></td>
+                    </tr>
+                </tfoot>
+            </table>
+        </div>
+    </div>
+</div>
+
+<!-- Toast Container for Real-time Notifications -->
+<div id="toastContainer" class="toast-container position-fixed top-0 end-0 p-3"></div>
+
+@section Scripts {
+    <script src="~/lib/microsoft/signalr/dist/browser/signalr.min.js"></script>
+    <script>
+        const connection = new signalR.HubConnectionBuilder()
+            .withUrl("/claimHub")
+            .build();
+
+        connection.start().then(() => {
+            connection.invoke("JoinGroup", "HR").catch(err => console.error(err));
+        }).catch(err => console.error('SignalR Connection Error: ', err));
+
+        // Handle new approved claims from managers
+        connection.on("ReceiveManagerApproval", (claimId) => {
+            console.log(`New approved claim received: ${claimId}`);
+            showNotification(`New claim #${claimId} approved and ready for payment processing`, 'info');
+            // Refresh the approved claims list
+            setTimeout(() => {
+                location.reload();
+            }, 2000);
+        });
+
+        function showNotification(message, type = 'info') {
+            const bgClass = type === 'success' ? 'bg-success' :
+                           type === 'error' ? 'bg-danger' :
+                           type === 'warning' ? 'bg-warning' : 'bg-info';
+
+            const toast = document.createElement('div');
+            toast.className = `toast align-items-center text-white ${bgClass} border-0`;
+            toast.setAttribute('role', 'alert');
+            toast.setAttribute('aria-live', 'assertive');
+            toast.setAttribute('aria-atomic', 'true');
+            toast.innerHTML = `
+                <div class="d-flex">
+                    <div class="toast-body">
+                        <i class="fas fa-money-bill-wave me-2"></i>${message}
+                    </div>
+                    <button type="button" class="btn-close btn-close-white me-2 m-auto" data-bs-dismiss="toast"></button>
+                </div>
+            `;
+
+            const container = document.getElementById('toastContainer');
+            container.appendChild(toast);
+
+            const bsToast = new bootstrap.Toast(toast);
+            bsToast.show();
+
+            // Remove toast after it hides
+            toast.addEventListener('hidden.bs.toast', () => {
+                toast.remove();
+            });
+        }
+
+        let selectedClaims = new Set();
+        let totalAmount = 0;
+
+        function toggleSelectAll(checkbox) {
+            const checkboxes = document.querySelectorAll('.claim-checkbox');
+            checkboxes.forEach(cb => {
+                cb.checked = checkbox.checked;
+                updateSelection(parseInt(cb.value), cb.checked);
+            });
+            updateTotalDisplay();
+        }
+
+        function updateSelection(claimId, isSelected) {
+            if (isSelected) {
+                selectedClaims.add(claimId);
+            } else {
+                selectedClaims.delete(claimId);
+            }
+            document.getElementById('selectAll').checked = selectedClaims.size === document.querySelectorAll('.claim-checkbox').length;
+        }
+
+        function updateTotalDisplay() {
+            totalAmount = 0;
+            document.querySelectorAll('.claim-checkbox:checked').forEach(checkbox => {
+                const row = checkbox.closest('tr');
+                const amountText = row.cells[6].textContent.replace('R ', '').replace(',', '');
+                totalAmount += parseFloat(amountText) || 0;
+            });
+            document.getElementById('selectedTotal').textContent = 'R ' + totalAmount.toFixed(2);
+        }
+
+        function processSelectedPayments() {
+            if (selectedClaims.size === 0) {
+                showNotification('Please select at least one claim to process.', 'warning');
+                return;
+            }
+
+            if (confirm(`Process ${selectedClaims.size} payments totaling R ${totalAmount.toFixed(2)}?`)) {
+                const request = {
+                    claimIds: Array.from(selectedClaims),
+                    paymentMethod: 'Bank Transfer'
+                };
+
+                fetch('@Url.Action("ProcessPayments", "HR")', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify(request)
+                })
+                .then(response => response.json())
+                .then(data => {
+                    if (data.success) {
+                        showNotification(data.message, 'success');
+                        setTimeout(() => {
+                            location.reload();
+                        }, 2000);
+                    } else {
+                        showNotification('Error: ' + data.error, 'error');
+                    }
+                })
+                .catch(error => {
+                    console.error('Error:', error);
+                    showNotification('Error processing payments', 'error');
+                });
+            }
+        }
+
+        function processSinglePayment(claimId) {
+            if (confirm('Process payment for this single claim?')) {
+                const request = {
+                    claimIds: [claimId],
+                    paymentMethod: 'Bank Transfer'
+                };
+
+                fetch('@Url.Action("ProcessPayments", "HR")', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify(request)
+                })
+                .then(response => response.json())
+                .then(data => {
+                    if (data.success) {
+                        showNotification(data.message, 'success');
+                        setTimeout(() => {
+                            location.reload();
+                        }, 2000);
+                    } else {
+                        showNotification('Error: ' + data.error, 'error');
+                    }
+                });
+            }
+        }
+
+        function exportToExcel() {
+            const startDate = new Date();
+            startDate.setMonth(startDate.getMonth() - 1); // Last month
+            const endDate = new Date();
+
+            const request = {
+                startDate: startDate.toISOString(),
+                endDate: endDate.toISOString(),
+                format: 'csv'
+            };
+
+            fetch('@Url.Action("ExportToExcel", "HR")', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify(request)
+            })
+            .then(response => response.blob())
+            .then(blob => {
+                const url = window.URL.createObjectURL(blob);
+                const a = document.createElement('a');
+                a.href = url;
+                a.download = `PaymentReport_${new Date().toISOString().split('T')[0]}.csv`;
+                document.body.appendChild(a);
+                a.click();
+                window.URL.revokeObjectURL(url);
+                showNotification('Export completed successfully!', 'success');
+            })
+            .catch(error => {
+                console.error('Error:', error);
+                showNotification('Error exporting data', 'error');
+            });
+        }
+
+        function viewClaim(claimId) {
+            window.open('@Url.Action("Review", "Approval")/' + claimId, '_blank');
+        }
+
+        // Initialize event listeners
+        document.addEventListener('DOMContentLoaded', function() {
+            document.querySelectorAll('.claim-checkbox').forEach(checkbox => {
+                checkbox.addEventListener('change', function() {
+                    updateSelection(parseInt(this.value), this.checked);
+                    updateTotalDisplay();
+                });
+            });
+        });
+    </script>
+}
+
+@functions {
+    public string GetLecturerName(int lecturerId)
+    {
+        return lecturerId switch
+        {
+            1 => "Liso Domingos",
+            2 => "Sarah Van der Merve",
+            3 => "Michael Myers",
+            4 => "Don Warren",
+            5 => "Thando Nxumalo",
+            _ => $"Lecturer #{lecturerId}"
+        };
+    }
+}

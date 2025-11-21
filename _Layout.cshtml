@@ -1,0 +1,395 @@
+﻿<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>@ViewData["Title"] - Contract Monthly Claim System</title>
+    <!-- Bootstrap CSS -->
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <!-- Font Awesome for icons -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <!-- Google Fonts -->
+    <link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@400;600;700&family=Open+Sans:wght@300;400;500&display=swap" rel="stylesheet">
+
+    <!-- Add the Styles section render call here -->
+    @await RenderSectionAsync("Styles", required: false)
+
+    <style>
+        :root {
+            --primary-color: #0d6efd;
+            --secondary-color: #6c757d;
+            --accent-color: #198754;
+            --light-bg: #f8f9fa;
+        }
+
+        body {
+            font-family: 'Open Sans', sans-serif;
+            background-color: #f5f7fb;
+            min-height: 100vh;
+            display: flex;
+            flex-direction: column;
+        }
+
+        h1, h2, h3, h4, h5, h6 {
+            font-family: 'Montserrat', sans-serif;
+            font-weight: 600;
+        }
+
+        .navbar {
+            box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
+        }
+
+        .navbar-brand {
+            font-family: 'Montserrat', sans-serif;
+            font-weight: 700;
+            font-size: 1.5rem;
+        }
+
+        .nav-link {
+            font-weight: 500;
+            margin: 0 5px;
+            border-radius: 4px;
+            transition: all 0.3s ease;
+        }
+
+            .nav-link:hover {
+                background-color: rgba(255, 255, 255, 0.1);
+                transform: translateY(-2px);
+            }
+
+        .container {
+            flex: 1;
+        }
+
+        footer {
+            background-color: var(--primary-color);
+            color: white;
+            margin-top: auto;
+        }
+
+        .footer-link {
+            color: rgba(255, 255, 255, 0.8);
+            text-decoration: none;
+            transition: color 0.3s ease;
+        }
+
+            .footer-link:hover {
+                color: white;
+            }
+
+        .user-info {
+            background-color: white;
+            border-radius: 8px;
+            padding: 15px;
+            box-shadow: 0 2px 10px rgba(0, 0, 0, 0.05);
+            margin-bottom: 20px;
+        }
+
+        .card {
+            border: none;
+            border-radius: 10px;
+            box-shadow: 0 4px 15px rgba(0, 0, 0, 0.08);
+            transition: transform 0.3s ease, box-shadow 0.3s ease;
+        }
+
+            .card:hover {
+                transform: translateY(-5px);
+                box-shadow: 0 8px 20px rgba(0, 0, 0, 0.12);
+            }
+
+        .btn-primary {
+            background-color: var(--primary-color);
+            border: none;
+            border-radius: 6px;
+            padding: 8px 20px;
+            font-weight: 500;
+        }
+
+            .btn-primary:hover {
+                background-color: #0b5ed7;
+                transform: translateY(-2px);
+            }
+
+        .notification-badge {
+            position: absolute;
+            top: -5px;
+            right: -5px;
+            background-color: #dc3545;
+            color: white;
+            border-radius: 50%;
+            width: 18px;
+            height: 18px;
+            font-size: 0.7rem;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .role-badge {
+            font-size: 0.7rem;
+            padding: 0.25em 0.6em;
+        }
+
+        .user-welcome {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            border-radius: 10px;
+            padding: 20px;
+            margin-bottom: 20px;
+        }
+    </style>
+</head>
+<body>
+    <nav class="navbar navbar-expand-lg navbar-dark bg-primary sticky-top">
+        <div class="container">
+            <a class="navbar-brand" href="@Url.Action("Index", "Home")">
+                <i class="fas fa-file-contract me-2"></i>CMCS
+            </a>
+            <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarNav" aria-controls="navbarNav" aria-expanded="false" aria-label="Toggle navigation">
+                <span class="navbar-toggler-icon"></span>
+            </button>
+            <div class="collapse navbar-collapse" id="navbarNav">
+                <ul class="navbar-nav me-auto">
+                    <li class="nav-item">
+                        <a class="nav-link" href="@Url.Action("Index", "Home")">
+                            <i class="fas fa-home me-1"></i>Home
+                        </a>
+                    </li>
+
+                    <!-- Show Dashboard for authenticated users -->
+                    @if (Context.Session.GetString("UserId") != null)
+                    {
+                        <li class="nav-item">
+                            <a class="nav-link" href="@Url.Action("Dashboard", "Home")">
+                                <i class="fas fa-tachometer-alt me-1"></i>Dashboard
+                            </a>
+                        </li>
+                    }
+
+                    <!-- Role-based navigation -->
+                    @if (Context.Session.GetString("UserRole") == "Lecturer")
+                    {
+                        <li class="nav-item">
+                            <a class="nav-link" href="@Url.Action("Index", "Claim")">
+                                <i class="fas fa-file-invoice-dollar me-1"></i>My Claims
+                            </a>
+                        </li>
+                        <li class="nav-item">
+                            <a class="nav-link" href="@Url.Action("Create", "Claim")">
+                                <i class="fas fa-plus-circle me-1"></i>New Claim
+                            </a>
+                        </li>
+                    }
+
+                    @if (Context.Session.GetString("UserRole") == "Coordinator" || Context.Session.GetString("UserRole") == "Manager")
+                    {
+                        <li class="nav-item">
+                            <a class="nav-link" href="@Url.Action("Index", "Approval")">
+                                <i class="fas fa-check-circle me-1"></i>Approvals
+                                @if (Context.Session.GetString("UserRole") == "Coordinator")
+                                {
+                                    <span class="notification-badge">3</span>
+                                }
+                            </a>
+                        </li>
+                    }
+
+                    @if (Context.Session.GetString("UserRole") == "HR")
+                    {
+                        <li class="nav-item">
+                            <a class="nav-link" href="@Url.Action("Dashboard", "HR")">
+                                <i class="fas fa-user-tie me-1"></i>HR Dashboard
+                            </a>
+                        </li>
+                        <li class="nav-item">
+                            <a class="nav-link" href="@Url.Action("ApprovedClaims", "HR")">
+                                <i class="fas fa-money-bill-wave me-1"></i>Payment Processing
+                            </a>
+                        </li>
+                        <li class="nav-item">
+                            <a class="nav-link" href="@Url.Action("Reports", "HR")">
+                                <i class="fas fa-chart-bar me-1"></i>Reports
+                            </a>
+                        </li>
+                    }
+                </ul>
+
+                <ul class="navbar-nav ms-auto">
+                    @if (Context.Session.GetString("UserId") != null)
+                    {
+                        <!-- User is logged in -->
+                        <li class="nav-item dropdown">
+                            <a class="nav-link dropdown-toggle" href="#" id="navbarDropdown" role="button" data-bs-toggle="dropdown" aria-expanded="false">
+                                <i class="fas fa-user-circle me-1"></i>
+                                @Context.Session.GetString("UserName")
+                                <span class="badge role-badge bg-info ms-1">@Context.Session.GetString("UserRole")</span>
+                            </a>
+                            <ul class="dropdown-menu dropdown-menu-end" aria-labelledby="navbarDropdown">
+                                <li class="dropdown-header">
+                                    <small>Signed in as</small><br>
+                                    <strong>@Context.Session.GetString("UserEmail")</strong>
+                                </li>
+                                <li><hr class="dropdown-divider"></li>
+                                <li><a class="dropdown-item" href="#"><i class="fas fa-user me-2"></i>Profile</a></li>
+                                <li><a class="dropdown-item" href="#"><i class="fas fa-cog me-2"></i>Settings</a></li>
+                                <li><hr class="dropdown-divider"></li>
+                                <li>
+                                    <a class="dropdown-item text-danger" href="@Url.Action("Logout", "Account")">
+                                        <i class="fas fa-sign-out-alt me-2"></i>Logout
+                                    </a>
+                                </li>
+                            </ul>
+                        </li>
+                    }
+                    else
+                    {
+                        <!-- User is not logged in -->
+                        <li class="nav-item">
+                            <a class="nav-link" href="@Url.Action("Login", "Account")">
+                                <i class="fas fa-sign-in-alt me-1"></i>Login
+                            </a>
+                        </li>
+                        <li class="nav-item">
+                            <a class="nav-link" href="@Url.Action("Register", "Account")">
+                                <i class="fas fa-user-plus me-1"></i>Register
+                            </a>
+                        </li>
+                    }
+                </ul>
+            </div>
+        </div>
+    </nav>
+
+    <div class="container mt-4">
+        <!-- Display Success/Error Messages -->
+        @if (TempData["Success"] != null)
+        {
+            <div class="alert alert-success alert-dismissible fade show" role="alert">
+                <i class="fas fa-check-circle me-2"></i>@TempData["Success"]
+                <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+            </div>
+        }
+        @if (TempData["Error"] != null)
+        {
+            <div class="alert alert-danger alert-dismissible fade show" role="alert">
+                <i class="fas fa-exclamation-circle me-2"></i>@TempData["Error"]
+                <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+            </div>
+        }
+        @if (TempData["Warning"] != null)
+        {
+            <div class="alert alert-warning alert-dismissible fade show" role="alert">
+                <i class="fas fa-exclamation-triangle me-2"></i>@TempData["Warning"]
+                <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+            </div>
+        }
+
+        <!-- User Welcome Bar (only for authenticated users) -->
+        @if (Context.Session.GetString("UserId") != null)
+        {
+            <div class="user-welcome">
+                <div class="row align-items-center">
+                    <div class="col-md-8">
+                        <h4 class="mb-1">Welcome back, @Context.Session.GetString("UserName")!</h4>
+                        <p class="mb-0 opacity-75">
+                            <i class="fas fa-shield-alt me-1"></i>
+                            Logged in as <strong>@Context.Session.GetString("UserRole")</strong>
+                            • Last login: Today at @DateTime.Now.ToString("HH:mm")
+                        </p>
+                    </div>
+                    <div class="col-md-4 text-md-end">
+                        <div class="btn-group">
+                            @if (Context.Session.GetString("UserRole") == "Lecturer")
+                            {
+                                <a href="@Url.Action("Create", "Claim")" class="btn btn-light">
+                                    <i class="fas fa-plus me-1"></i>New Claim
+                                </a>
+                            }
+                            @if (Context.Session.GetString("UserRole") == "Coordinator" || Context.Session.GetString("UserRole") == "Manager")
+                            {
+                                <a href="@Url.Action("Index", "Approval")" class="btn btn-light">
+                                    <i class="fas fa-tasks me-1"></i>Review Claims
+                                </a>
+                            }
+                            @if (Context.Session.GetString("UserRole") == "HR")
+                            {
+                                <a href="@Url.Action("Dashboard", "HR")" class="btn btn-light">
+                                    <i class="fas fa-chart-line me-1"></i>HR Dashboard
+                                </a>
+                            }
+                        </div>
+                    </div>
+                </div>
+            </div>
+        }
+        else
+        {
+            <!-- Guest Welcome Message -->
+            <div class="user-info text-center">
+                <h5>Welcome to Contract Monthly Claim System</h5>
+                <p class="text-muted mb-0">Please <a href="@Url.Action("Login", "Account")" class="text-primary">login</a> or <a href="@Url.Action("Register", "Account")" class="text-primary">register</a> to access the system.</p>
+            </div>
+        }
+
+        @RenderBody()
+    </div>
+
+    <footer class="py-4 mt-5">
+        <div class="container">
+            <div class="row">
+                <div class="col-md-6">
+                    <p class="mb-0">&copy; 2024 Contract Monthly Claim System. All rights reserved.</p>
+                </div>
+                <div class="col-md-6 text-md-end">
+                    <a href="#" class="footer-link me-3"><i class="fas fa-question-circle me-1"></i> Help</a>
+                    <a href="#" class="footer-link me-3"><i class="fas fa-shield-alt me-1"></i> Privacy</a>
+                    <a href="#" class="footer-link"><i class="fas fa-file-alt me-1"></i> Terms</a>
+                </div>
+            </div>
+        </div>
+    </footer>
+
+    <!-- Bootstrap JS and Popper.js -->
+    <script src="https://cdn.jsdelivr.net/npm/@@popperjs/core@2.11.6/dist/umd/popper.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.min.js"></script>
+
+    <!-- Render Scripts Section if it exists -->
+    @await RenderSectionAsync("Scripts", required: false)
+
+    <script>
+        // Initialize tooltips
+        var tooltipTriggerList = [].slice.call(document.querySelectorAll('[data-bs-toggle="tooltip"]'))
+        var tooltipList = tooltipTriggerList.map(function (tooltipTriggerEl) {
+            return new bootstrap.Tooltip(tooltipTriggerEl)
+        })
+
+        // Auto-dismiss alerts after 5 seconds
+        setTimeout(function() {
+            var alerts = document.querySelectorAll('.alert');
+            alerts.forEach(function(alert) {
+                var bsAlert = new bootstrap.Alert(alert);
+                bsAlert.close();
+            });
+        }, 5000);
+
+        // Update notification count (simulated)
+        function updateNotificationCount() {
+            // This would typically call an API to get real notification count
+            console.log('Notification system ready');
+        }
+
+        // Initialize on page load
+        document.addEventListener('DOMContentLoaded', function() {
+            updateNotificationCount();
+
+            // Add active class to current page in navigation
+            var currentPath = window.location.pathname;
+            document.querySelectorAll('.nav-link').forEach(function(link) {
+                if (link.getAttribute('href') === currentPath) {
+                    link.classList.add('active');
+                }
+            });
+        });
+    </script>
+</body>
+</html>

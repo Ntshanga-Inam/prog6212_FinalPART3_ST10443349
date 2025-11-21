@@ -1,0 +1,238 @@
+﻿@{
+    ViewData["Title"] = "HR Dashboard";
+    var stats = ViewBag.Stats as CMCS.Controllers.HRStatistics;
+}
+
+<div class="row">
+    <div class="col-12">
+        <div class="d-flex justify-content-between align-items-center mb-4">
+            <h2><i class="fas fa-user-tie me-2"></i>HR Dashboard</h2>
+            <div class="btn-group">
+                <a href="@Url.Action("ApprovedClaims", "HR")" class="btn btn-outline-primary">Approved Claims</a>
+                <a href="@Url.Action("LecturerManagement", "HR")" class="btn btn-outline-primary">Lecturer Management</a>
+                <a href="@Url.Action("Reports", "HR")" class="btn btn-outline-primary">Reports</a>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Statistics Cards -->
+<div class="row">
+    <div class="col-xl-3 col-md-6 mb-4">
+        <div class="card border-left-primary shadow h-100 py-2">
+            <div class="card-body">
+                <div class="row no-gutters align-items-center">
+                    <div class="col mr-2">
+                        <div class="text-xs font-weight-bold text-primary text-uppercase mb-1">
+                            Total Approved Claims
+                        </div>
+                        <div class="h5 mb-0 font-weight-bold text-gray-800" data-stat="total-approved">@stats.TotalApprovedClaims</div>
+                    </div>
+                    <div class="col-auto">
+                        <i class="fas fa-file-invoice-dollar fa-2x text-gray-300"></i>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="col-xl-3 col-md-6 mb-4">
+        <div class="card border-left-success shadow h-100 py-2">
+            <div class="card-body">
+                <div class="row no-gutters align-items-center">
+                    <div class="col mr-2">
+                        <div class="text-xs font-weight-bold text-success text-uppercase mb-1">
+                            Total Payment Amount
+                        </div>
+                        <div class="h5 mb-0 font-weight-bold text-gray-800" data-stat="total-amount">R @stats.TotalPaymentAmount.ToString("N2")</div>
+                    </div>
+                    <div class="col-auto">
+                        <i class="fas fa-money-bill-wave fa-2x text-gray-300"></i>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="col-xl-3 col-md-6 mb-4">
+        <div class="card border-left-warning shadow h-100 py-2">
+            <div class="card-body">
+                <div class="row no-gutters align-items-center">
+                    <div class="col mr-2">
+                        <div class="text-xs font-weight-bold text-warning text-uppercase mb-1">
+                            Pending Processing
+                        </div>
+                        <div class="h5 mb-0 font-weight-bold text-gray-800" data-stat="pending-processing">@stats.PendingProcessing</div>
+                    </div>
+                    <div class="col-auto">
+                        <i class="fas fa-clock fa-2x text-gray-300"></i>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="col-xl-3 col-md-6 mb-4">
+        <div class="card border-left-info shadow h-100 py-2">
+            <div class="card-body">
+                <div class="row no-gutters align-items-center">
+                    <div class="col mr-2">
+                        <div class="text-xs font-weight-bold text-info text-uppercase mb-1">
+                            Active Lecturers
+                        </div>
+                        <div class="h5 mb-0 font-weight-bold text-gray-800" data-stat="lecturers-count">@stats.LecturersCount</div>
+                    </div>
+                    <div class="col-auto">
+                        <i class="fas fa-chalkboard-teacher fa-2x text-gray-300"></i>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="row">
+    <!-- Quick Actions -->
+    <div class="col-lg-6">
+        <div class="card shadow mb-4">
+            <div class="card-header py-3">
+                <h6 class="m-0 font-weight-bold text-primary">Quick Actions</h6>
+            </div>
+            <div class="card-body">
+                <div class="row">
+                    <div class="col-md-6 mb-3">
+                        <a href="@Url.Action("ApprovedClaims", "HR")" class="btn btn-primary btn-block">
+                            <i class="fas fa-check-circle me-2"></i>Process Payments
+                        </a>
+                    </div>
+                    <div class="col-md-6 mb-3">
+                        <a href="@Url.Action("LecturerManagement", "HR")" class="btn btn-success btn-block">
+                            <i class="fas fa-users me-2"></i>Manage Lecturers
+                        </a>
+                    </div>
+                    <div class="col-md-6 mb-3">
+                        <a href="@Url.Action("Reports", "HR")" class="btn btn-info btn-block">
+                            <i class="fas fa-chart-bar me-2"></i>Generate Reports
+                        </a>
+                    </div>
+                    <div class="col-md-6 mb-3">
+                        <button class="btn btn-warning btn-block" onclick="generateMonthlyReport()">
+                            <i class="fas fa-file-invoice me-2"></i>Monthly Summary
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Recent Activity -->
+    <div class="col-lg-6">
+        <div class="card shadow mb-4">
+            <div class="card-header py-3">
+                <h6 class="m-0 font-weight-bold text-primary">Recent Approved Claims</h6>
+            </div>
+            <div class="card-body">
+                <div class="table-responsive">
+                    <table class="table table-bordered" id="recentClaimsTable" width="100%" cellspacing="0">
+                        <thead>
+                            <tr>
+                                <th>Claim ID</th>
+                                <th>Lecturer</th>
+                                <th>Amount</th>
+                                <th>Approved Date</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <!-- Data will be loaded via JavaScript -->
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+@section Scripts {
+    <script>
+        function generateMonthlyReport() {
+            const currentDate = new Date();
+            const request = {
+                year: currentDate.getFullYear(),
+                month: currentDate.getMonth() + 1
+            };
+
+            fetch('@Url.Action("GenerateMonthlySummary", "HR")', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify(request)
+            })
+            .then(response => response.json())
+            .then(data => {
+                if (data.success) {
+                    // Show report in modal or new page
+                    showMonthlyReport(data.data);
+                } else {
+                    alert('Error generating report: ' + data.error);
+                }
+            })
+            .catch(error => {
+                console.error('Error:', error);
+                alert('Error generating report');
+            });
+        }
+
+        function showMonthlyReport(data) {
+            // Implementation for displaying the report
+            alert(`Monthly Summary Generated:\nTotal Claims: ${data.totalClaims}\nApproved: ${data.approvedClaims}\nTotal Amount: R ${data.totalAmount.toFixed(2)}`);
+        }
+
+        // Load recent claims
+        function loadRecentClaims() {
+            fetch('/api/ClaimsApi?status=Approved&limit=5')
+                .then(response => response.json())
+                .then(claims => {
+                    const tbody = document.querySelector('#recentClaimsTable tbody');
+                    if (tbody) {
+                        tbody.innerHTML = claims.slice(0, 5).map(claim => `
+                            <tr>
+                                <td>#${claim.claimId}</td>
+                                <td>${getLecturerName(claim.lecturerId)}</td>
+                                <td>R ${claim.amount.toFixed(2)}</td>
+                                <td>${new Date(claim.approvedDate).toLocaleDateString()}</td>
+                            </tr>
+                        `).join('');
+                    }
+                })
+                .catch(error => console.error('Error loading recent claims:', error));
+        }
+
+        function getLecturerName(lecturerId) {
+            const lecturers = {
+                1: 'Liso Domingos',
+                2: 'Sarah Van der Merve',
+                3: 'Michael Myers',
+                4: 'Don Warren',
+                5: 'Thando Nxumalo'
+            };
+            return lecturers[lecturerId] || `Lecturer #${lecturerId}`;
+        }
+
+        // Refresh HR dashboard data
+        function refreshHRDashboard() {
+            // Reload the page to get updated statistics
+            setTimeout(() => {
+                window.location.reload();
+            }, 30000);
+        }
+
+        // Auto-refresh every 30 seconds
+        setInterval(refreshHRDashboard, 30000);
+
+        document.addEventListener('DOMContentLoaded', function() {
+            loadRecentClaims();
+            console.log('HR Dashboard loaded with auto-refresh');
+        });
+    </script>
+}
